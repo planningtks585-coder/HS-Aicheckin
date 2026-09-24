@@ -8,6 +8,7 @@ import { Dashboard } from './components/dashboard/Dashboard.tsx';
 import { CheckInKiosk } from './components/checkin/CheckInKiosk.tsx';
 import { TeacherManagement } from './components/teachers/TeacherManagement.tsx';
 import { EmployeeManagement } from './components/employees/EmployeeManagement.tsx';
+import { DepartmentManagement } from './components/departments/DepartmentManagement.tsx';
 import { ScheduleManagement } from './components/schedules/ScheduleManagement.tsx';
 import { AttendanceList } from './components/attendance/AttendanceList.tsx';
 import { AttendanceReports } from './components/reports/AttendanceReports.tsx';
@@ -85,6 +86,7 @@ const MainLayout: React.FC = () => {
       case 'employees':
         return <EmployeeManagement />;
       case 'departments':
+        return <DepartmentManagement />;
       case 'schedules':
         return <ScheduleManagement />;
       case 'attendance':

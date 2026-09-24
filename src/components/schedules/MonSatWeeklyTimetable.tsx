@@ -1,5 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Teacher, TeacherSubjectSchedule } from '../../types/index.ts';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Teacher, TeacherSubjectSchedule, TimetablePeriod } from '../../types/index.ts';
+import { StorageService } from '../../services/storageService.ts';
+import { PeriodModal } from './PeriodModal.tsx';
+import { PeriodManagementModal } from './PeriodManagementModal.tsx';
 import { useLanguage } from '../../context/LanguageContext.tsx';
 import {
   Clock,
@@ -15,7 +18,9 @@ import {
   CheckCircle2,
   User,
   Sparkles,
-  DollarSign
+  DollarSign,
+  Sliders,
+  Coffee
 } from 'lucide-react';
 
 export interface WeekDayDef {
@@ -44,10 +49,16 @@ export const SUNDAY_DEF: WeekDayDef = {
 };
 
 interface PeriodSlot {
+  id?: string;
   periodNumber: number;
   periodName: string;
+  khmerPeriodName?: string;
   startTime: string;
   endTime: string;
+  sessionType?: 'Morning' | 'Afternoon' | 'Evening' | 'Break';
+  isBreak?: boolean;
+  durationMinutes?: number;
+  color?: string;
 }
 
 interface MonSatWeeklyTimetableProps {
@@ -109,33 +120,50 @@ export const MonSatWeeklyTimetable: React.FC<MonSatWeeklyTimetableProps> = ({
     return Array.from(set).sort();
   }, [subjectSchedules]);
 
-  // Standard Default Periods + dynamically discovered unique periods
+  const [periods, setPeriods] = useState<TimetablePeriod[]>(() => StorageService.getPeriods());
+  const [isPeriodManageModalOpen, setIsPeriodManageModalOpen] = useState<boolean>(false);
+  const [isQuickPeriodModalOpen, setIsQuickPeriodModalOpen] = useState<boolean>(false);
+  const [editingPeriod, setEditingPeriod] = useState<TimetablePeriod | null>(null);
+
+  useEffect(() => {
+    const unsub = StorageService.subscribe(() => {
+      setPeriods(StorageService.getPeriods());
+    });
+    return () => unsub();
+  }, []);
+
+  const handleAddPeriod = (p: TimetablePeriod) => {
+    StorageService.addPeriod(p);
+  };
+
+  const handleUpdatePeriod = (id: string, updates: Partial<TimetablePeriod>, syncClasses: boolean) => {
+    StorageService.updatePeriod(id, updates, syncClasses);
+  };
+
+  const handleDeletePeriod = (id: string) => {
+    StorageService.deletePeriod(id);
+  };
+
+  const handleResetDefaults = () => {
+    StorageService.resetPeriodsToDefault();
+  };
+
+  // Derive sorted periodSlots dynamically from StorageService periods
   const periodSlots: PeriodSlot[] = useMemo(() => {
+    if (periods && periods.length > 0) {
+      return [...periods].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+
+    // Fallback if none in storage
     const map = new Map<number, PeriodSlot>();
+    map.set(1, { id: 'p1', periodNumber: 1, periodName: 'Period 1', startTime: '07:30', endTime: '09:00', durationMinutes: 90, color: '#4F46E5' });
+    map.set(2, { id: 'p2', periodNumber: 2, periodName: 'Period 2', startTime: '09:15', endTime: '10:45', durationMinutes: 90, color: '#0284C7' });
+    map.set(99, { id: 'p-break', periodNumber: 99, periodName: 'Midday Break', khmerPeriodName: 'សម្រាកថ្ងៃត្រង់', startTime: '11:30', endTime: '13:30', isBreak: true, durationMinutes: 120, color: '#D97706' });
+    map.set(3, { id: 'p3', periodNumber: 3, periodName: 'Period 3', startTime: '13:30', endTime: '15:00', durationMinutes: 90, color: '#059669' });
+    map.set(4, { id: 'p4', periodNumber: 4, periodName: 'Period 4', startTime: '15:15', endTime: '16:45', durationMinutes: 90, color: '#7C3AED' });
 
-    // Seed standard school periods
-    map.set(1, { periodNumber: 1, periodName: 'Period 1', startTime: '07:30', endTime: '09:00' });
-    map.set(2, { periodNumber: 2, periodName: 'Period 2', startTime: '09:15', endTime: '10:45' });
-    map.set(3, { periodNumber: 3, periodName: 'Period 3', startTime: '13:30', endTime: '15:00' });
-    map.set(4, { periodNumber: 4, periodName: 'Period 4', startTime: '15:15', endTime: '16:45' });
-
-    // Collect from schedules
-    subjectSchedules.forEach(sub => {
-      const num = sub.periodNumber || 1;
-      if (!map.has(num)) {
-        map.set(num, {
-          periodNumber: num,
-          periodName: sub.periodName ? sub.periodName.split('(')[0].trim() : `Period ${num}`,
-          startTime: sub.startTime || '08:00',
-          endTime: sub.endTime || '09:30'
-        });
-      }
-    });
-
-    return Array.from(map.values()).sort((a, b) => {
-      return a.startTime.localeCompare(b.startTime);
-    });
-  }, [subjectSchedules]);
+    return Array.from(map.values()).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [periods]);
 
   // Filter schedules according to active filters
   const filteredSchedules = useMemo(() => {
@@ -260,6 +288,15 @@ export const MonSatWeeklyTimetable: React.FC<MonSatWeeklyTimetableProps> = ({
           </div>
 
           <button
+            onClick={() => setIsPeriodManageModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors border border-indigo-200 shrink-0"
+            title="Manage Timetable Periods & Bells"
+          >
+            <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden sm:inline">{isKhmer ? 'កំណត់វេនម៉ោង' : 'Manage Periods'}</span>
+          </button>
+
+          <button
             onClick={handlePrint}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors shrink-0"
             title="Print Mon-Sat Weekly Timetable"
@@ -379,27 +416,148 @@ export const MonSatWeeklyTimetable: React.FC<MonSatWeeklyTimetableProps> = ({
             {/* Timetable Body */}
             <tbody className="divide-y divide-slate-200">
               {periodSlots.map((period, pIdx) => {
-                // Insert a Midday Break banner row after period 2 (around 11:30 - 13:30)
-                const isBreakAfter = period.periodNumber === 2;
-
-                return (
-                  <React.Fragment key={period.periodNumber}>
-                    <tr className="divide-x divide-slate-100 hover:bg-slate-50/50 transition-colors">
-                      {/* Period Header Column */}
-                      <td className="py-4 px-4 align-top bg-slate-50/80 sticky left-0 z-10">
-                        <div className="flex flex-col">
-                          <span className="inline-block px-2 py-0.5 rounded-lg text-[11px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 border border-indigo-200 w-fit">
-                            {period.periodName}
-                          </span>
-                          <span className="font-mono text-xs font-extrabold text-slate-900 mt-1.5 flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-indigo-600" />
-                            {period.startTime} – {period.endTime}
-                          </span>
-                          <span className="text-[10px] text-slate-500 mt-0.5">
-                            {isKhmer ? 'រយៈពេល ៩០ នាទី' : '90 mins duration'}
-                          </span>
+                // If this slot is configured as a Break or Lunch interval
+                if (period.isBreak || period.sessionType === 'Break') {
+                  return (
+                    <tr key={period.id || `break-${period.periodNumber}-${pIdx}`} className="bg-amber-50/70 border-y border-amber-200/90">
+                      <td className="py-2.5 px-3.5 font-mono font-bold text-amber-900 text-xs sticky left-0 bg-amber-50/95 z-10 border-r border-amber-200">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <Coffee className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>{period.startTime} – {period.endTime}</span>
+                          </div>
+                          {canEdit && (
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const fullP = periods.find(p => p.id === period.id) || {
+                                    id: period.id || `p-${period.periodNumber}`,
+                                    periodNumber: period.periodNumber,
+                                    periodName: period.periodName,
+                                    khmerPeriodName: period.khmerPeriodName,
+                                    startTime: period.startTime,
+                                    endTime: period.endTime,
+                                    sessionType: 'Break',
+                                    isBreak: true,
+                                    durationMinutes: period.durationMinutes || 120,
+                                    color: period.color || '#D97706',
+                                    isActive: true
+                                  };
+                                  setEditingPeriod(fullP);
+                                  setIsQuickPeriodModalOpen(true);
+                                }}
+                                className="p-1 rounded text-amber-700 hover:text-amber-950 hover:bg-amber-100 transition-colors"
+                                title="Edit Break Slot"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                              {canDelete && period.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (window.confirm(isKhmer ? 'តើអ្នកចង់លុបម៉ោងសម្រាកនេះមែនទេ?' : 'Delete this break interval?')) {
+                                      handleDeletePeriod(period.id!);
+                                    }
+                                  }}
+                                  className="p-1 rounded text-amber-700 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                  title="Delete Break Slot"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
+                      <td
+                        colSpan={displayDays.length}
+                        className="py-2.5 px-4 text-center text-xs font-bold text-amber-900 tracking-wide"
+                      >
+                        <span className="font-khmer">
+                          ☕ {period.khmerPeriodName || period.periodName} ({period.periodName}) • {period.durationMinutes || 120} {isKhmer ? 'នាទី' : 'mins'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={period.id || `period-${period.periodNumber}-${pIdx}`} className="divide-x divide-slate-100 hover:bg-slate-50/50 transition-colors">
+                    {/* Period Header Column */}
+                    <td className="py-4 px-3.5 align-top bg-slate-50/90 sticky left-0 z-10 border-r border-slate-200">
+                      <div className="flex flex-col">
+                        <div className="flex items-center justify-between gap-1">
+                          <span
+                            className="inline-block px-2 py-0.5 rounded-lg text-[11px] font-black uppercase tracking-wider text-white shadow-2xs w-fit"
+                            style={{ backgroundColor: period.color || '#4F46E5' }}
+                          >
+                            {period.periodName}
+                          </span>
+
+                          {canEdit && (
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const fullP = periods.find(p => p.id === period.id) || {
+                                    id: period.id || `p-${period.periodNumber}`,
+                                    periodNumber: period.periodNumber,
+                                    periodName: period.periodName,
+                                    khmerPeriodName: period.khmerPeriodName,
+                                    startTime: period.startTime,
+                                    endTime: period.endTime,
+                                    sessionType: period.sessionType || 'Morning',
+                                    isBreak: false,
+                                    durationMinutes: period.durationMinutes || 90,
+                                    color: period.color || '#4F46E5',
+                                    isActive: true
+                                  };
+                                  setEditingPeriod(fullP);
+                                  setIsQuickPeriodModalOpen(true);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                title={isKhmer ? 'កែសម្រួលវេននេះ' : 'Edit period slot'}
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                              {canDelete && period.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const count = subjectSchedules.filter(s => s.periodNumber === period.periodNumber).length;
+                                    if (count > 0) {
+                                      if (!window.confirm(isKhmer ? `វេននេះមានមុខវិជ្ជាចំនួន ${count} ថ្នាក់។ តើអ្នកពិតជាចង់លុបវេននេះមែនទេ?` : `Period "${period.periodName}" has ${count} scheduled classes. Delete period slot?`)) {
+                                        return;
+                                      }
+                                    }
+                                    handleDeletePeriod(period.id!);
+                                  }}
+                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                  title={isKhmer ? 'លុបវេននេះ' : 'Delete period slot'}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {period.khmerPeriodName && (
+                          <span className="text-[10px] font-khmer font-bold text-slate-500 mt-1">
+                            {period.khmerPeriodName}
+                          </span>
+                        )}
+
+                        <span className="font-mono text-xs font-extrabold text-slate-900 mt-1.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-indigo-600 shrink-0" />
+                          {period.startTime} – {period.endTime}
+                        </span>
+                        <span className="text-[10px] text-slate-500 mt-0.5">
+                          {period.durationMinutes || 90} {isKhmer ? 'នាទី' : 'mins duration'}
+                        </span>
+                      </div>
+                    </td>
 
                       {/* Day Columns */}
                       {displayDays.map(day => {
@@ -429,7 +587,14 @@ export const MonSatWeeklyTimetable: React.FC<MonSatWeeklyTimetableProps> = ({
                                   return (
                                     <div
                                       key={cls.id}
-                                      className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden group"
+                                      onClick={() => {
+                                        if (canEdit && onEditSchedule) {
+                                          onEditSchedule(cls);
+                                        }
+                                      }}
+                                      role="button"
+                                      tabIndex={0}
+                                      className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs hover:shadow-md hover:border-indigo-400 hover:ring-2 hover:ring-indigo-100 transition-all relative overflow-hidden group cursor-pointer text-left"
                                       style={{ borderLeftColor: cardBg, borderLeftWidth: '4px' }}
                                     >
                                       {/* Top Row: Code & Rate */}
@@ -446,21 +611,29 @@ export const MonSatWeeklyTimetable: React.FC<MonSatWeeklyTimetableProps> = ({
                                           )}
 
                                           {/* Quick Actions for Admins */}
-                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                                          <div className="flex items-center gap-0.5">
                                             {canEdit && onEditSchedule && (
                                               <button
-                                                onClick={() => onEditSchedule(cls)}
-                                                className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100"
-                                                title="Edit"
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  onEditSchedule(cls);
+                                                }}
+                                                className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+                                                title={isKhmer ? 'កែសម្រួលវេន / មុខវិជ្ជា' : 'Edit Period / Schedule'}
                                               >
                                                 <Edit2 className="w-3 h-3" />
                                               </button>
                                             )}
                                             {canDelete && onDeleteSchedule && (
                                               <button
-                                                onClick={() => onDeleteSchedule(cls.id, cls.subject)}
-                                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                                                title="Delete"
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  onDeleteSchedule(cls.id, cls.subject);
+                                                }}
+                                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                                title={isKhmer ? 'លុប' : 'Delete'}
                                               >
                                                 <Trash2 className="w-3 h-3" />
                                               </button>
@@ -537,48 +710,86 @@ export const MonSatWeeklyTimetable: React.FC<MonSatWeeklyTimetableProps> = ({
                         );
                       })}
                     </tr>
+                  );
+                })}
 
-                    {/* Midday Lunch Break separator */}
-                    {isBreakAfter && (
-                      <tr className="bg-amber-50/60 border-y border-amber-200">
-                        <td className="py-2.5 px-4 font-mono font-bold text-amber-900 text-xs flex items-center gap-1.5 sticky left-0 bg-amber-50/90 z-10">
-                          <Clock className="w-3.5 h-3.5 text-amber-600" />
-                          <span>11:30 – 13:30</span>
-                        </td>
-                        <td
-                          colSpan={displayDays.length}
-                          className="py-2.5 px-4 text-center text-xs font-bold text-amber-800 tracking-wide"
-                        >
-                          <span className="font-khmer">🍽️ ម៉ោងសម្រាកថ្ងៃត្រង់ (Lunch & Midday Break Interval)</span>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                {/* Add Period Row */}
+                {canCreate && (
+                  <tr className="bg-slate-50/60 hover:bg-slate-100/60 transition-colors">
+                    <td colSpan={displayDays.length + 1} className="py-3 px-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPeriod(null);
+                          setIsQuickPeriodModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400 text-xs font-bold shadow-2xs transition-all active:scale-95"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>{isKhmer ? '+ បង្កើតវេនម៉ោងបង្រៀនថ្មី (Add New Timetable Period Slot)' : '+ Add New Period Slot (e.g. Period 5 / Evening Session)'}</span>
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        {/* Footer Legend */}
+        <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-2 px-1">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span>Mon–Sat Academic Schedule (ចន្ទ ដល់ សៅរ៍)</span>
+            </span>
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+              <span>Configurable Teaching Periods</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 font-semibold text-slate-600">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Synchronized with Faculty Attendance System</span>
+          </div>
+        </div>
+
+        {/* Quick Add/Edit Period Modal */}
+        {isQuickPeriodModalOpen && (
+          <PeriodModal
+            isOpen={isQuickPeriodModalOpen}
+            onClose={() => {
+              setIsQuickPeriodModalOpen(false);
+              setEditingPeriod(null);
+            }}
+            initialPeriod={editingPeriod}
+            existingPeriods={periods}
+            onSave={(p, sync) => {
+              if (editingPeriod) {
+                handleUpdatePeriod(editingPeriod.id, p, sync);
+              } else {
+                handleAddPeriod(p);
+              }
+            }}
+            isKhmer={isKhmer}
+          />
+        )}
+
+        {/* Full Period Management Modal */}
+        {isPeriodManageModalOpen && (
+          <PeriodManagementModal
+            isOpen={isPeriodManageModalOpen}
+            onClose={() => setIsPeriodManageModalOpen(false)}
+            periods={periods}
+            subjectSchedules={subjectSchedules}
+            onAddPeriod={handleAddPeriod}
+            onUpdatePeriod={handleUpdatePeriod}
+            onDeletePeriod={handleDeletePeriod}
+            onResetDefaults={handleResetDefaults}
+            isKhmer={isKhmer}
+          />
+        )}
       </div>
-
-      {/* Footer Legend */}
-      <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-2 px-1">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 font-medium">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span>Mon–Sat Academic Schedule (ចន្ទ ដល់ សៅរ៍)</span>
-          </span>
-          <span className="flex items-center gap-1.5 font-medium">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
-            <span>90-min Teaching Sessions</span>
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1 font-semibold text-slate-600">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Synchronized with Faculty Attendance System</span>
-        </div>
-      </div>
-    </div>
-  );
-};
+    );
+  };

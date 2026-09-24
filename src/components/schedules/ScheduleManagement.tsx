@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext.tsx';
 import { useNotification } from '../../context/NotificationContext.tsx';
 import { useLanguage } from '../../context/LanguageContext.tsx';
 import { StorageService } from '../../services/storageService.ts';
-import { Schedule, ScheduleTargetType, TeacherSubjectSchedule, Department, WorkLocation, Teacher } from '../../types/index.ts';
+import { Schedule, ScheduleTargetType, TeacherSubjectSchedule, TimetablePeriod, Department, WorkLocation, Teacher } from '../../types/index.ts';
 import {
   CalendarDays,
   Plus,
@@ -24,10 +24,12 @@ import {
   Check,
   Palette,
   Sparkles,
-  Upload
+  Upload,
+  Sliders
 } from 'lucide-react';
 import { ImportTeacherScheduleModal } from './ImportTeacherScheduleModal.tsx';
 import { MonSatWeeklyTimetable } from './MonSatWeeklyTimetable.tsx';
+import { PeriodManagementModal } from './PeriodManagementModal.tsx';
 
 export const ScheduleManagement: React.FC = () => {
   const { currentUser, hasPermission } = useAuth();
@@ -48,14 +50,17 @@ export const ScheduleManagement: React.FC = () => {
   // Reactive state synced with StorageService
   const [schedules, setSchedules] = useState<Schedule[]>(() => StorageService.getSchedules());
   const [subjectSchedules, setSubjectSchedules] = useState<TeacherSubjectSchedule[]>(() => StorageService.getSubjectSchedules());
+  const [periods, setPeriods] = useState<TimetablePeriod[]>(() => StorageService.getPeriods());
   const [teachers, setTeachers] = useState<Teacher[]>(() => StorageService.getTeachers().filter(t => t.status === 'Active'));
   const [departments, setDepartments] = useState<Department[]>(() => StorageService.getDepartments());
   const [locations, setLocations] = useState<WorkLocation[]>(() => StorageService.getLocations());
+  const [isPeriodManageModalOpen, setIsPeriodManageModalOpen] = useState(false);
 
   useEffect(() => {
     const unsub = StorageService.subscribe(() => {
       setSchedules(StorageService.getSchedules());
       setSubjectSchedules(StorageService.getSubjectSchedules());
+      setPeriods(StorageService.getPeriods());
       setTeachers(StorageService.getTeachers().filter(t => t.status === 'Active'));
       setDepartments(StorageService.getDepartments());
       setLocations(StorageService.getLocations());
@@ -130,7 +135,24 @@ export const ScheduleManagement: React.FC = () => {
 
   const handleOpenEdit = (sch: Schedule) => {
     setEditingSchedule(sch);
-    setFormData(sch);
+    setFormData({
+      ...sch,
+      name: sch.name || '',
+      department: sch.department || departments[0]?.name || 'Academic & Curriculum',
+      targetType: sch.targetType || 'Standard',
+      daysOfWeek: sch.daysOfWeek || [1, 2, 3, 4, 5],
+      startTime: sch.startTime || '07:30',
+      endTime: sch.endTime || '11:30',
+      afternoonStartTime: sch.afternoonStartTime || '',
+      afternoonEndTime: sch.afternoonEndTime || '',
+      gracePeriodMinutes: sch.gracePeriodMinutes ?? 10,
+      absenceDetectionMinutes: sch.absenceDetectionMinutes ?? 60,
+      requiredCheckIn: sch.requiredCheckIn ?? true,
+      requiredCheckOut: sch.requiredCheckOut ?? true,
+      location: sch.location || locations[0]?.name || 'Main Campus - Central Building',
+      isActive: sch.isActive ?? true,
+      color: sch.color || '#3B82F6'
+    });
     setIsModalOpen(true);
   };
 
@@ -284,8 +306,25 @@ export const ScheduleManagement: React.FC = () => {
   const handleOpenEditSubject = (sub: TeacherSubjectSchedule) => {
     setEditingSubjectSchedule(sub);
     setSubjectFormData({
-      ...sub,
-      daysOfWeek: sub.daysOfWeek && sub.daysOfWeek.length > 0 ? sub.daysOfWeek : [sub.dayOfWeek]
+      id: sub.id || '',
+      teacherId: sub.teacherId || '',
+      teacherName: sub.teacherName || '',
+      khmerTeacherName: sub.khmerTeacherName || '',
+      subject: sub.subject || '',
+      khmerSubject: sub.khmerSubject || '',
+      subjectCode: sub.subjectCode || '',
+      gradeClass: sub.gradeClass || 'Grade 12A',
+      room: sub.room || 'Room 201',
+      dayOfWeek: sub.dayOfWeek ?? 1,
+      daysOfWeek: sub.daysOfWeek && sub.daysOfWeek.length > 0 ? sub.daysOfWeek : [sub.dayOfWeek ?? 1],
+      periodNumber: sub.periodNumber ?? 1,
+      periodName: sub.periodName || 'Period 1',
+      startTime: sub.startTime || '07:30',
+      endTime: sub.endTime || '09:00',
+      gracePeriodMinutes: sub.gracePeriodMinutes ?? 10,
+      hourlyRate: sub.hourlyRate,
+      color: sub.color || '#4F46E5',
+      isActive: sub.isActive ?? true
     });
     setIsSubjectModalOpen(true);
   };
@@ -418,6 +457,15 @@ export const ScheduleManagement: React.FC = () => {
 
           {hasPermission('schedules.create') && (
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsPeriodManageModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-indigo-700 text-xs font-bold border border-indigo-200 shadow-2xs transition-all active:scale-95"
+                title="Manage School Timetable Periods & Bells"
+              >
+                <Clock className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                <span>{isKhmer ? 'កំណត់វេនម៉ោង' : 'Manage Periods'}</span>
+              </button>
+
               <button
                 onClick={() => setIsImportModalOpen(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md shadow-slate-900/20 transition-all active:scale-95"
@@ -1116,7 +1164,7 @@ export const ScheduleManagement: React.FC = () => {
                   <input
                     type="text"
                     required
-                    value={subjectFormData.subject}
+                    value={subjectFormData.subject || ''}
                     onChange={e => setSubjectFormData({ ...subjectFormData, subject: e.target.value })}
                     placeholder="e.g. Advanced Mathematics"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -1157,7 +1205,7 @@ export const ScheduleManagement: React.FC = () => {
                   <input
                     type="text"
                     required
-                    value={subjectFormData.gradeClass}
+                    value={subjectFormData.gradeClass || ''}
                     onChange={e => setSubjectFormData({ ...subjectFormData, gradeClass: e.target.value })}
                     placeholder="e.g. Grade 12A"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -1174,7 +1222,7 @@ export const ScheduleManagement: React.FC = () => {
                   <input
                     type="text"
                     required
-                    value={subjectFormData.room}
+                    value={subjectFormData.room || ''}
                     onChange={e => setSubjectFormData({ ...subjectFormData, room: e.target.value })}
                     placeholder="e.g. Room 201 or Physics Lab"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -1187,7 +1235,7 @@ export const ScheduleManagement: React.FC = () => {
                   <input
                     type="text"
                     required
-                    value={subjectFormData.periodName}
+                    value={subjectFormData.periodName || ''}
                     onChange={e => setSubjectFormData({ ...subjectFormData, periodName: e.target.value })}
                     placeholder="e.g. Period 1 (07:30 - 09:00)"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -1202,14 +1250,29 @@ export const ScheduleManagement: React.FC = () => {
                     <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                     {isKhmer ? 'ជ្រើសរើសម៉ោងគំរូរហ័ស (Quick Period Presets)' : 'Quick Timetable Presets'}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsPeriodManageModalOpen(true)}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                  >
+                    + {isKhmer ? 'កែសម្រួល / បន្ថែមវេនម៉ោង' : 'Configure Periods'}
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { num: 1, name: 'Period 1 (07:30 - 09:00)', start: '07:30', end: '09:00' },
-                    { num: 2, name: 'Period 2 (09:15 - 10:45)', start: '09:15', end: '10:45' },
-                    { num: 3, name: 'Period 3 (13:30 - 15:00)', start: '13:30', end: '15:00' },
-                    { num: 4, name: 'Period 4 (15:15 - 16:45)', start: '15:15', end: '16:45' }
-                  ].map(p => (
+                  {(periods.filter(p => !p.isBreak && p.isActive !== false).length > 0
+                    ? periods.filter(p => !p.isBreak && p.isActive !== false).sort((a, b) => a.startTime.localeCompare(b.startTime)).map(p => ({
+                        num: p.periodNumber,
+                        name: `${p.periodName} (${p.startTime} - ${p.endTime})`,
+                        start: p.startTime,
+                        end: p.endTime
+                      }))
+                    : [
+                        { num: 1, name: 'Period 1 (07:30 - 09:00)', start: '07:30', end: '09:00' },
+                        { num: 2, name: 'Period 2 (09:15 - 10:45)', start: '09:15', end: '10:45' },
+                        { num: 3, name: 'Period 3 (13:30 - 15:00)', start: '13:30', end: '15:00' },
+                        { num: 4, name: 'Period 4 (15:15 - 16:45)', start: '15:15', end: '16:45' }
+                      ]
+                  ).map(p => (
                     <button
                       type="button"
                       key={p.num}
@@ -1241,7 +1304,7 @@ export const ScheduleManagement: React.FC = () => {
                   <input
                     type="time"
                     required
-                    value={subjectFormData.startTime}
+                    value={subjectFormData.startTime || ''}
                     onChange={e => setSubjectFormData({ ...subjectFormData, startTime: e.target.value })}
                     className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
                   />
@@ -1253,7 +1316,7 @@ export const ScheduleManagement: React.FC = () => {
                   <input
                     type="time"
                     required
-                    value={subjectFormData.endTime}
+                    value={subjectFormData.endTime || ''}
                     onChange={e => setSubjectFormData({ ...subjectFormData, endTime: e.target.value })}
                     className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
                   />
@@ -1417,6 +1480,21 @@ export const ScheduleManagement: React.FC = () => {
         }}
         teachers={teachers}
       />
+
+      {/* Period Management Modal */}
+      {isPeriodManageModalOpen && (
+        <PeriodManagementModal
+          isOpen={isPeriodManageModalOpen}
+          onClose={() => setIsPeriodManageModalOpen(false)}
+          periods={periods}
+          subjectSchedules={subjectSchedules}
+          onAddPeriod={(p) => StorageService.addPeriod(p)}
+          onUpdatePeriod={(id, updates, syncClasses) => StorageService.updatePeriod(id, updates, syncClasses)}
+          onDeletePeriod={(id) => StorageService.deletePeriod(id)}
+          onResetDefaults={() => StorageService.resetPeriodsToDefault()}
+          isKhmer={isKhmer}
+        />
+      )}
 
     </div>
   );

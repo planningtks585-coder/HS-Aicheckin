@@ -41,7 +41,24 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   useEffect(() => {
     if (initialEmployee) {
-      setFormData(initialEmployee);
+      setFormData({
+        ...initialEmployee,
+        fullName: initialEmployee.fullName || '',
+        khmerName: initialEmployee.khmerName || '',
+        employeeId: initialEmployee.employeeId || '',
+        phone: initialEmployee.phone || '',
+        email: initialEmployee.email || '',
+        telegramChatId: initialEmployee.telegramChatId || '',
+        department: initialEmployee.department || 'IT & Facilities',
+        position: initialEmployee.position || 'Staff Specialist',
+        supervisor: initialEmployee.supervisor || '',
+        employmentType: initialEmployee.employmentType || 'Full-time',
+        joinDate: initialEmployee.joinDate || new Date().toISOString().split('T')[0],
+        workLocation: initialEmployee.workLocation || locations[0]?.name || 'Main Campus - Central Building',
+        assignedScheduleId: initialEmployee.assignedScheduleId || schedules[0]?.id || 'sch-standard-fulltime',
+        status: initialEmployee.status || 'Active',
+        photoUrl: initialEmployee.photoUrl || ''
+      });
     } else {
       setFormData({
         id: `emp-${Date.now()}`,
@@ -103,7 +120,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.fullName}
+                value={formData.fullName || ''}
                 onChange={e => setFormData({ ...formData, fullName: e.target.value })}
                 placeholder="e.g. Heng Vannara"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -115,7 +132,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.khmerName}
+                value={formData.khmerName || ''}
                 onChange={e => setFormData({ ...formData, khmerName: e.target.value })}
                 placeholder="ឧ. ហេង វណ្ណារ៉ា"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-khmer font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -131,7 +148,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.employeeId}
+                value={formData.employeeId || ''}
                 onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -157,7 +174,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.position}
+                value={formData.position || ''}
                 onChange={e => setFormData({ ...formData, position: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -171,7 +188,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.supervisor}
+                value={formData.supervisor || ''}
                 onChange={e => setFormData({ ...formData, supervisor: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -183,7 +200,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.phone}
+                value={formData.phone || ''}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -195,7 +212,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <input
                 type="email"
                 required
-                value={formData.email}
+                value={formData.email || ''}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -209,7 +226,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.telegramChatId}
+                value={formData.telegramChatId || ''}
                 onChange={e => setFormData({ ...formData, telegramChatId: e.target.value })}
                 placeholder="451298711"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden"
@@ -267,7 +284,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.photoUrl}
+                value={formData.photoUrl || ''}
                 onChange={e => setFormData({ ...formData, photoUrl: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />

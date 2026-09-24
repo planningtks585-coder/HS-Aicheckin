@@ -106,6 +106,21 @@ export interface Employee {
 
 export type ScheduleTargetType = 'Department' | 'Individual' | 'Standard' | 'Special';
 
+export interface TimetablePeriod {
+  id: string;
+  periodNumber: number; // 1, 2, 3, 4, 5...
+  periodName: string; // e.g. 'Period 1'
+  khmerPeriodName?: string; // e.g. 'ម៉ោងទី ១'
+  startTime: string; // e.g. '07:30'
+  endTime: string; // e.g. '09:00'
+  sessionType?: 'Morning' | 'Afternoon' | 'Evening' | 'Break';
+  isBreak?: boolean;
+  durationMinutes?: number;
+  description?: string;
+  color?: string;
+  isActive?: boolean;
+}
+
 export interface TeacherSubjectSchedule {
   id: string;
   teacherId: string; // Links to Teacher.id
@@ -354,6 +369,7 @@ export interface AuditLog {
   userRole: string;
   action: string;
   target: string;
+  details?: string;
   previousValue?: string;
   newValue?: string;
   ipAddress: string;

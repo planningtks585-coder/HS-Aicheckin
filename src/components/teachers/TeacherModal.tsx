@@ -49,7 +49,24 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
     if (initialTeacher) {
       setFormData({
         ...initialTeacher,
-        hourlyRate: initialTeacher.hourlyRate !== undefined ? initialTeacher.hourlyRate : 20,
+        fullName: initialTeacher.fullName || '',
+        khmerName: initialTeacher.khmerName || '',
+        englishName: initialTeacher.englishName || initialTeacher.fullName || '',
+        teacherId: initialTeacher.teacherId || '',
+        employeeId: initialTeacher.employeeId || '',
+        phone: initialTeacher.phone || '',
+        email: initialTeacher.email || '',
+        telegramChatId: initialTeacher.telegramChatId || '',
+        department: initialTeacher.department || departments[0]?.name || 'Mathematics & Science',
+        position: initialTeacher.position || 'Teacher',
+        subject: initialTeacher.subject || 'General Education',
+        dateOfBirth: initialTeacher.dateOfBirth || '1990-01-01',
+        joinDate: initialTeacher.joinDate || new Date().toISOString().split('T')[0],
+        photoUrl: initialTeacher.photoUrl || '',
+        status: initialTeacher.status || 'Active',
+        assignedLocation: initialTeacher.assignedLocation || locations[0]?.name || 'Main Campus - Central Building',
+        assignedScheduleId: initialTeacher.assignedScheduleId || schedules[0]?.id || 'sch-standard-fulltime',
+        hourlyRate: initialTeacher.hourlyRate !== undefined && initialTeacher.hourlyRate !== null ? initialTeacher.hourlyRate : 20,
         currency: initialTeacher.currency || 'USD'
       });
     } else {
@@ -122,7 +139,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.fullName}
+                value={formData.fullName || ''}
                 onChange={e => setFormData({ ...formData, fullName: e.target.value })}
                 placeholder="e.g. Sok Chenda"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -134,7 +151,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.khmerName}
+                value={formData.khmerName || ''}
                 onChange={e => setFormData({ ...formData, khmerName: e.target.value })}
                 placeholder="ឧ. សុខ ចិន្តា"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-khmer font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -151,7 +168,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.teacherId}
+                value={formData.teacherId || ''}
                 onChange={e => setFormData({ ...formData, teacherId: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -162,7 +179,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.employeeId}
+                value={formData.employeeId || ''}
                 onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -206,7 +223,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.position}
+                value={formData.position || ''}
                 onChange={e => setFormData({ ...formData, position: e.target.value })}
                 placeholder="Senior Mathematics Teacher"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -219,7 +236,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.subject}
+                value={formData.subject || ''}
                 onChange={e => setFormData({ ...formData, subject: e.target.value })}
                 placeholder="Calculus & Physics"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
@@ -236,7 +253,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               <input
                 type="text"
                 required
-                value={formData.phone}
+                value={formData.phone || ''}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -248,7 +265,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               <input
                 type="email"
                 required
-                value={formData.email}
+                value={formData.email || ''}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />
@@ -259,7 +276,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.telegramChatId}
+                value={formData.telegramChatId || ''}
                 onChange={e => setFormData({ ...formData, telegramChatId: e.target.value })}
                 placeholder="e.g. 892341901"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-sky-500 focus:outline-hidden"
@@ -336,7 +353,7 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.photoUrl}
+                value={formData.photoUrl || ''}
                 onChange={e => setFormData({ ...formData, photoUrl: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
               />

@@ -4,6 +4,7 @@ import {
   Teacher,
   Employee,
   Schedule,
+  TimetablePeriod,
   TeacherSubjectSchedule,
   AttendanceRecord,
   Holiday,
@@ -23,6 +24,7 @@ import {
   INITIAL_TEACHERS,
   INITIAL_EMPLOYEES,
   INITIAL_SCHEDULES,
+  INITIAL_TIMETABLE_PERIODS,
   INITIAL_TEACHER_SUBJECT_SCHEDULES,
   INITIAL_ATTENDANCE,
   INITIAL_HOLIDAYS,
@@ -44,6 +46,7 @@ const STORAGE_KEYS = {
   TEACHERS: 'edutrack_teachers_v1',
   EMPLOYEES: 'edutrack_employees_v1',
   SCHEDULES: 'edutrack_schedules_v1',
+  PERIODS: 'edutrack_periods_v1',
   SUBJECT_SCHEDULES: 'edutrack_subject_schedules_v1',
   ATTENDANCE: 'edutrack_attendance_v1',
   HOLIDAYS: 'edutrack_holidays_v1',
@@ -136,6 +139,27 @@ export const StorageService = {
     const list = this.getTeachers();
     this.saveTeachers([teacher, ...list]);
   },
+  addTeachersBatch(newTeachers: Teacher[], mode: 'append' | 'replace' = 'append') {
+    if (mode === 'replace') {
+      this.saveTeachers(newTeachers);
+      return;
+    }
+    const current = this.getTeachers();
+    const map = new Map<string, Teacher>();
+    // index existing
+    current.forEach(t => {
+      map.set(t.id, t);
+      if (t.teacherId) map.set(t.teacherId.toLowerCase(), t);
+    });
+    // add or overwrite
+    newTeachers.forEach(t => {
+      map.set(t.id, t);
+    });
+    // filter unique by id
+    const unique = Array.from(new Set(Array.from(map.values()).map(t => t.id)))
+      .map(id => Array.from(map.values()).find(t => t.id === id)!);
+    this.saveTeachers(unique);
+  },
   updateTeacher(id: string, updates: Partial<Teacher>) {
     const list = this.getTeachers().map(t => t.id === id ? { ...t, ...updates } : t);
     this.saveTeachers(list);
@@ -183,6 +207,53 @@ export const StorageService = {
   deleteSchedule(id: string) {
     const list = this.getSchedules().filter(s => s.id !== id);
     this.saveSchedules(list);
+  },
+
+  // School Timetable Periods (Period Slots)
+  getPeriods(): TimetablePeriod[] {
+    return getStored<TimetablePeriod[]>(STORAGE_KEYS.PERIODS, INITIAL_TIMETABLE_PERIODS);
+  },
+  savePeriods(periods: TimetablePeriod[]) {
+    setStored(STORAGE_KEYS.PERIODS, periods);
+  },
+  addPeriod(period: TimetablePeriod) {
+    const list = this.getPeriods();
+    this.savePeriods([...list, period]);
+  },
+  updatePeriod(id: string, updates: Partial<TimetablePeriod>, syncSubjectSchedules = false) {
+    const periods = this.getPeriods();
+    const target = periods.find(p => p.id === id);
+    const updated = periods.map(p => p.id === id ? { ...p, ...updates } : p);
+    this.savePeriods(updated);
+
+    if (syncSubjectSchedules && target) {
+      const oldNum = target.periodNumber;
+      const newNum = updates.periodNumber !== undefined ? updates.periodNumber : oldNum;
+      const newStart = updates.startTime || target.startTime;
+      const newEnd = updates.endTime || target.endTime;
+      const newName = updates.periodName || target.periodName;
+
+      const subList = this.getSubjectSchedules().map(sub => {
+        if (sub.periodNumber === oldNum) {
+          return {
+            ...sub,
+            periodNumber: newNum,
+            periodName: `${newName} (${newStart} - ${newEnd})`,
+            startTime: newStart,
+            endTime: newEnd
+          };
+        }
+        return sub;
+      });
+      this.saveSubjectSchedules(subList);
+    }
+  },
+  deletePeriod(id: string) {
+    const list = this.getPeriods().filter(p => p.id !== id);
+    this.savePeriods(list);
+  },
+  resetPeriodsToDefault() {
+    this.savePeriods(INITIAL_TIMETABLE_PERIODS);
   },
 
   // Teacher Subject Schedules (Period / Timetable)
@@ -311,6 +382,14 @@ export const StorageService = {
   addDepartment(d: Department) {
     const list = this.getDepartments();
     this.saveDepartments([...list, d]);
+  },
+  updateDepartment(id: string, updates: Partial<Department>) {
+    const list = this.getDepartments().map(d => d.id === id ? { ...d, ...updates } : d);
+    this.saveDepartments(list);
+  },
+  deleteDepartment(id: string) {
+    const list = this.getDepartments().filter(d => d.id !== id);
+    this.saveDepartments(list);
   },
 
   // Locations

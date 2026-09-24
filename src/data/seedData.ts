@@ -4,6 +4,7 @@ import {
   Teacher,
   Employee,
   Schedule,
+  TimetablePeriod,
   TeacherSubjectSchedule,
   AttendanceRecord,
   Holiday,
@@ -259,6 +260,79 @@ export const INITIAL_SCHEDULES: Schedule[] = [
     location: 'Main Campus - Central Building',
     isActive: true,
     color: '#F59E0B'
+  }
+];
+
+export const INITIAL_TIMETABLE_PERIODS: TimetablePeriod[] = [
+  {
+    id: 'period-1',
+    periodNumber: 1,
+    periodName: 'Period 1',
+    khmerPeriodName: 'ម៉ោងទី ១',
+    startTime: '07:30',
+    endTime: '09:00',
+    sessionType: 'Morning',
+    isBreak: false,
+    durationMinutes: 90,
+    description: 'Morning Session 1 (07:30 - 09:00)',
+    color: '#4F46E5',
+    isActive: true
+  },
+  {
+    id: 'period-2',
+    periodNumber: 2,
+    periodName: 'Period 2',
+    khmerPeriodName: 'ម៉ោងទី ២',
+    startTime: '09:15',
+    endTime: '10:45',
+    sessionType: 'Morning',
+    isBreak: false,
+    durationMinutes: 90,
+    description: 'Morning Session 2 (09:15 - 10:45)',
+    color: '#0284C7',
+    isActive: true
+  },
+  {
+    id: 'period-break',
+    periodNumber: 99,
+    periodName: 'Midday Break',
+    khmerPeriodName: 'សម្រាកថ្ងៃត្រង់',
+    startTime: '11:30',
+    endTime: '13:30',
+    sessionType: 'Break',
+    isBreak: true,
+    durationMinutes: 120,
+    description: 'Lunch & Faculty Rest Interval (11:30 - 13:30)',
+    color: '#D97706',
+    isActive: true
+  },
+  {
+    id: 'period-3',
+    periodNumber: 3,
+    periodName: 'Period 3',
+    khmerPeriodName: 'ម៉ោងទី ៣',
+    startTime: '13:30',
+    endTime: '15:00',
+    sessionType: 'Afternoon',
+    isBreak: false,
+    durationMinutes: 90,
+    description: 'Afternoon Session 1 (13:30 - 15:00)',
+    color: '#059669',
+    isActive: true
+  },
+  {
+    id: 'period-4',
+    periodNumber: 4,
+    periodName: 'Period 4',
+    khmerPeriodName: 'ម៉ោងទី ៤',
+    startTime: '15:15',
+    endTime: '16:45',
+    sessionType: 'Afternoon',
+    isBreak: false,
+    durationMinutes: 90,
+    description: 'Afternoon Session 2 (15:15 - 16:45)',
+    color: '#7C3AED',
+    isActive: true
   }
 ];
 

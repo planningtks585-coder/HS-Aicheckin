@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { useNotification } from '../../context/NotificationContext.tsx';
 import { StorageService } from '../../services/storageService.ts';
 import { TelegramService } from '../../services/telegramService.ts';
-import { Teacher, AttendanceRecord, TeacherSubjectSchedule } from '../../types/index.ts';
+import { Teacher, AttendanceRecord, TeacherSubjectSchedule, Department } from '../../types/index.ts';
 import { TeacherModal } from './TeacherModal.tsx';
+import { ImportTeacherModal } from './ImportTeacherModal.tsx';
 import { MonSatWeeklyTimetable } from '../schedules/MonSatWeeklyTimetable.tsx';
 import {
   GraduationCap,
@@ -12,6 +13,7 @@ import {
   Search,
   Filter,
   Download,
+  Upload,
   Send,
   MoreVertical,
   Calendar,
@@ -35,13 +37,23 @@ export const TeacherManagement: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [sortBy, setSortBy] = useState<'name' | 'id' | 'joinDate'>('name');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [selectedTeacherForHistory, setSelectedTeacherForHistory] = useState<Teacher | null>(null);
   const [selectedTeacherForSchedule, setSelectedTeacherForSchedule] = useState<Teacher | null>(null);
   const [subjectSchedules, setSubjectSchedules] = useState<TeacherSubjectSchedule[]>(() => StorageService.getSubjectSchedules());
+  const [teachers, setTeachers] = useState<Teacher[]>(() => StorageService.getTeachers());
+  const [departments, setDepartments] = useState<Department[]>(() => StorageService.getDepartments());
 
-  const departments = StorageService.getDepartments();
-  const teachers = StorageService.getTeachers();
+  useEffect(() => {
+    const unsub = StorageService.subscribe(() => {
+      setTeachers(StorageService.getTeachers());
+      setDepartments(StorageService.getDepartments());
+      setSubjectSchedules(StorageService.getSubjectSchedules());
+    });
+    return unsub;
+  }, []);
+
   const attendanceList = StorageService.getAttendance();
 
   // Filter & Sort
@@ -180,6 +192,16 @@ export const TeacherManagement: React.FC = () => {
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
           </button>
+
+          {hasPermission('teachers.create') && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md shadow-slate-900/20 transition-all active:scale-95"
+            >
+              <Upload className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Import Teachers (CSV)</span>
+            </button>
+          )}
 
           {hasPermission('teachers.create') && (
             <button
@@ -581,6 +603,17 @@ export const TeacherManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk Import Teachers Modal */}
+      <ImportTeacherModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        existingTeachers={teachers}
+        onSuccess={(count) => {
+          setTeachers(StorageService.getTeachers());
+          showToast(`Successfully imported ${count} teachers`, 'success');
+        }}
+      />
 
     </div>
   );
